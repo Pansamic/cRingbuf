@@ -24,45 +24,26 @@ extern "C" {
 /*                    INCLUDE                        */
 /*****************************************************/
 #include <stdint.h>
-#include <stdio.h>
+#include <stddef.h>
 /*****************************************************/
 /*                     MACRO                         */
 /*****************************************************/
-#define RINGBUF_HANDLE(fn) \
-    {\
-        (ringbuf_ret_t) ret = fn;\
-        if(ret == RINGBUF_ERROR)\
-        {\
-            printf("ring buffer error!\r\n");\
-        }\
-        else if(ret == RINGBUF_FULL)\
-        {\
-            printf("ring buffer full!\r\n");\
-        }\
-        else if(ret == RINGBUF_EMPTY)\
-        {\
-            printf("ring buffer empty!\r\n");\
-        }\
-        else if(ret == RINGBUF_LACK_SPACE)\
-        {\
-            printf("ring buffer lack space!\r\n");\
-        }\
-        else if(ret == RINGBUF_LOCKED)\
-        {\
-            printf("ring buffer locked!\r\n");\
-        }\
-    }
+
 /*****************************************************/
 /*                     DEFINE                        */
 /*****************************************************/
 #if defined (__x86_64__) || defined (_M_X64)
     #define MAX_BYTE_POWER_OF_TWO (3)
+    typedef uint64_t ringbuf_max_size_t;
 #elif defined (i386) || defined (__i386__) || defined (__i386) || defined (_M_IX86)
     #define MAX_BYTE_POWER_OF_TWO (2)
+    typedef uint32_t ringbuf_max_size_t;
 #elif defined (__aarch64__) || defined (_M_ARM64)
     #define MAX_BYTE_POWER_OF_TWO (3)
+    typedef uint64_t ringbuf_max_size_t;
 #elif defined (__arm__) || defined (_M_ARM)
     #define MAX_BYTE_POWER_OF_TWO (2)
+    typedef uint32_t ringbuf_max_size_t;
 #else
     #error "Unsupported platform"
 #endif
@@ -127,7 +108,7 @@ then using the RINGBUF_API_VISIBILITY flag to "export" the same symbols the way 
 /* project version */
 #define RINGBUF_VERSION_MAJOR 0
 #define RINGBUF_VERSION_MINOR 1
-#define RINGBUF_VERSION_PATCH 0
+#define RINGBUF_VERSION_PATCH 1
 
 /*****************************************************/
 /*                   TYPEDEFINE                      */
@@ -159,8 +140,8 @@ typedef struct ringbuf_type_definition
     uint8_t *buf;
     size_t capacity;
     size_t size;
-    uint32_t head;
-    uint32_t tail;
+    size_t head;
+    size_t tail;
     uint8_t is_full;
     uint8_t is_empty;
     ringbuf_lock_t lock;

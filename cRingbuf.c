@@ -1,4 +1,4 @@
-/**
+ /**
  * @file cRingbuf.c
  * @author pansamic (pansamic@foxmail.com)
  * @brief ring buffer for embeded system.
@@ -21,7 +21,7 @@
 /*                     MACRO                         */
 /*****************************************************/
 /* This is a safeguard to prevent copy-pasters from using incompatible C and header files */
-#if (RINGBUF_VERSION_MAJOR != 0) || (RINGBUF_VERSION_MINOR != 1) || (RINGBUF_VERSION_PATCH != 0)
+#if (RINGBUF_VERSION_MAJOR != 0) || (RINGBUF_VERSION_MINOR != 1) || (RINGBUF_VERSION_PATCH != 1)
     #error cRingbuf.h and cRingbuf.c have different versions. Make sure that both have the same.
 #endif
 /**
@@ -79,7 +79,7 @@ inline static size_t ringbuf_memcpy(void *dest, void *src, size_t length);
 /*               FUNCTION DEFINITION                 */
 /*****************************************************/
 
-RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_init(ringbuf_t *ringbuf, void *buf, size_t capacity)
+RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_init(ringbuf_t *ringbuf, void *buf, size_t capacity, ringbuf_rule_t rule)
 {
     if (ringbuf == NULL || buf == NULL || capacity == 0)
     {
@@ -97,6 +97,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_init(ringbuf_t *ringbuf, void *buf, size_t
     ringbuf->is_full = 0;
     ringbuf->is_empty = 1;
     ringbuf->lock = 0;
+    ringbuf->rule = rule;
     return RINGBUF_OK;
 }
 
@@ -114,6 +115,8 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_reset(ringbuf_t *ringbuf)
     ringbuf->lock = 0;
     return RINGBUF_OK;
 }
+
+// TODO
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_align_optimize(ringbuf_t *ringbuf)
 {
 
@@ -204,9 +207,9 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data
 
     if(ringbuf->rule == RINGBUF_RULE_OVERWRITE)
     {
-        while(overwrite_size--)
+        for(size_t i=0 ; i<overwrite_size ; i++)
         {
-            ringbuf->buf[ringbuf->head] = data + free_size + overwrite_size;
+            ringbuf->buf[ringbuf->head] = *((uint8_t*)data + free_size + i);
             RINGBUF_ADD_LENGTH(ringbuf,1);
             RINGBUF_REMOVE_LENGTH(ringbuf,1);
         }
@@ -369,6 +372,8 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_remove_block(ringbuf_t *ringbuf, size_t le
     {
         ringbuf->is_full = 0;
     }
+    *removed_length = actual_removed_length;
+    ringbuf_unlock(ringbuf);
     return RINGBUF_OK;
 }
 
@@ -382,7 +387,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_size(ringbuf_t *ringbuf, size_t *size)
     {
         return RINGBUF_LOCKED;
     }
-    size = ringbuf->size;
+    *size = ringbuf->size;
     ringbuf_unlock(ringbuf);
     return RINGBUF_OK;
 }
@@ -396,7 +401,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_capacity(ringbuf_t *ringbuf, size_t *c
     {
         return RINGBUF_LOCKED;
     }
-    capacity = ringbuf->capacity;
+    *capacity = ringbuf->capacity;
     ringbuf_unlock(ringbuf);
     return RINGBUF_OK;
 }
@@ -406,7 +411,12 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_free_size(ringbuf_t *ringbuf, size_t *
     {
         return RINGBUF_ERROR;
     }
-    free_size = ringbuf->capacity - ringbuf->size;
+    if(ringbuf_lock(ringbuf))
+    {
+        return RINGBUF_LOCKED;
+    }
+    *free_size = ringbuf->capacity - ringbuf->size;
+    ringbuf_unlock(ringbuf);
     return RINGBUF_OK;
 }
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_free_continuous_block(ringbuf_t *ringbuf, void **data, size_t *length)
@@ -481,16 +491,16 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_stuffed_continuous_block(ringbuf_t *ri
 }
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_lock(ringbuf_t *ringbuf)
 {
-    if(ringbuf->lock == LOCKED)
+    if(ringbuf->lock == RINGBUF_LOCK)
     {
         return RINGBUF_LOCKED;
     }
-    ringbuf->lock = LOCK;
+    ringbuf->lock = RINGBUF_LOCK;
     return RINGBUF_OK;
 }
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_unlock(ringbuf_t *ringbuf)
 {
-    ringbuf->lock = UNLOCK;
+    ringbuf->lock = RINGBUF_UNLOCK;
 }
 
 inline static size_t ringbuf_memcpy(void *dest, void *src, size_t length)
@@ -501,8 +511,8 @@ inline static size_t ringbuf_memcpy(void *dest, void *src, size_t length)
     }
     size_t block_size = length >> MAX_BYTE_POWER_OF_TWO;
     size_t byte_size = length & (PLATFORM_MAX_BYTES-1);
-    void *dest_block_start_ptr = ((void*)dest + byte_size);
-    void *src_block_start_ptr = ((void*)src + byte_size);
+    ringbuf_max_size_t *dest_block_start_ptr = (ringbuf_max_size_t*)((uint8_t*)dest + byte_size);
+    ringbuf_max_size_t *src_block_start_ptr = (ringbuf_max_size_t*)((uint8_t*)src + byte_size);
     uint8_t *dest_byte_start_ptr = (uint8_t *)dest;
     uint8_t *src_byte_start_ptr = (uint8_t *)src;
     while(byte_size--)
@@ -511,7 +521,9 @@ inline static size_t ringbuf_memcpy(void *dest, void *src, size_t length)
     }
     while(block_size--)
     {
-        *dest_block_start_ptr++ = *src_block_start_ptr++;
+        *(dest_block_start_ptr) = *(src_block_start_ptr);
+        dest_block_start_ptr++;
+        src_block_start_ptr++;
     }
     return length;
 }
