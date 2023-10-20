@@ -28,11 +28,9 @@ TODO. Files under test/STM32 are not ready to be tested.
 
 ## Example
 
-**On PC**
+[On Linux PC](https://github.com/Pansamic/cRingbuf/tree/master/test/linux_PC)
 
-
-**On MCU**
-
+[On STM32 MCU](https://github.com/Pansamic/cRingbuf/tree/master/test/STM32)
 
 ## API
 
