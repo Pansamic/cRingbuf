@@ -11,16 +11,28 @@ High performance ring buffer for generic platform, optimized for embeded system.
 
 ## Build Test
 
-### test on linux PC
+### test on Linux
 
 ```bash
 git clone https://github.com/Pansamic/cRingbuf.git
-cd cRingbuf/test/linux_PC
+cd cRingbuf/test/Generic
 mkdir build && cd build
 cmake ..
 make
 ./cRingbuf_test 1024 10
 ```
+
+### test on windows
+
+```bash
+git clone https://github.com/Pansamic/cRingbuf.git
+cd cRingbuf/test/Generic
+mkdir build && cd build
+cmake -G "MinGW Makefiles" ..
+mingw32-make
+cRingbuf_test 1024 10
+```
+
 
 ### test on STM32 MCU
 

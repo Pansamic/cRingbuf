@@ -1,16 +1,27 @@
-# cRingbuf on Linux PC
-
-This is a simple test on Linux PC
+# cRingbuf on Generic Platform
 
 ## Build test
 
+**Build on Linux**
+
 ```bash
 git clone https://github.com/Pansamic/cRingbuf.git
-cd cRingbuf/test/linux_PC
+cd cRingbuf/test/Generic
 mkdir build && cd build
 cmake ..
 make
 ./cRingbuf_test 1024 10
+```
+
+**Build on Windows**
+
+```bash
+git clone https://github.com/Pansamic/cRingbuf.git
+cd cRingbuf/test/Generic
+mkdir build && cd build
+cmake -G "MinGW Makefiles" ..
+mingw32-make
+cRingbuf_test 1024 10
 ```
 
 ## Test description

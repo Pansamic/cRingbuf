@@ -199,8 +199,8 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data
         }
     }
 
-    ringbuf_memcpy(ringbuf->buf + ringbuf->head, data, first_block_length);
-    ringbuf_memcpy(ringbuf->buf, data + first_block_length, second_block_length);
+    ringbuf_memcpy((uint8_t*)ringbuf->buf + ringbuf->head, data, first_block_length);
+    ringbuf_memcpy((uint8_t*)ringbuf->buf, (uint8_t*)data + first_block_length, second_block_length);
     RINGBUF_ADD_LENGTH(ringbuf,first_block_length + second_block_length);
     RINGBUF_CHECK_FULL(ringbuf);
     ringbuf->is_empty = 0;
@@ -322,8 +322,8 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_block(ringbuf_t *ringbuf, void *data,
             return RINGBUF_EMPTY;
         }
     }
-    ringbuf_memcpy(data, ringbuf->buf + ringbuf->tail, first_block_length);
-    ringbuf_memcpy(data + first_block_length, ringbuf->buf, second_block_length);
+    ringbuf_memcpy(data, (uint8_t*)ringbuf->buf + ringbuf->tail, first_block_length);
+    ringbuf_memcpy((uint8_t*)data + first_block_length, ringbuf->buf, second_block_length);
     *read_length = actual_read_length;
     ringbuf_unlock(ringbuf);
     return RINGBUF_OK;
