@@ -1,4 +1,7 @@
 # change log
+## v0.1.2
+**Time**:
+1. fix void pointer offset bug
 ## v0.1.1
 **Time**:2023.10.21-
 1. remove test handler from cRingbuf.h, use handler in your source file instead.
