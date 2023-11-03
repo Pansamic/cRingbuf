@@ -501,6 +501,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_lock(ringbuf_t *ringbuf)
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_unlock(ringbuf_t *ringbuf)
 {
     ringbuf->lock = RINGBUF_UNLOCK;
+    return RINGBUF_OK;
 }
 
 inline static size_t ringbuf_memcpy(void *dest, void *src, size_t length)
