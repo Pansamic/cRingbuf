@@ -8,4 +8,4 @@ project(cRingbuf_test C)
 include_directories(../../)
 
 # Add the executable for the test program and the cRingbuf source file
-add_executable(cRingbuf_test cRingbuf_test.c ../../cRingbuf.c)
+add_executable(cRingbuf_test ../cRingbuf_test.c ../../cRingbuf.c)
