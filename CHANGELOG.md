@@ -2,6 +2,7 @@
 ## v0.1.2
 **Time**:
 1. fix void pointer offset bug
+2. add written/read compensation function for DMA transmission.
 ## v0.1.1
 **Time**:2023.10.21-
 1. remove test handler from cRingbuf.h, use handler in your source file instead.

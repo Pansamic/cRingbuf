@@ -138,13 +138,13 @@ typedef enum ringbuf_rule_type_definition
 typedef struct ringbuf_type_definition
 {
     uint8_t *buf;
-    size_t capacity;
-    size_t size;
-    size_t head;
-    size_t tail;
-    uint8_t is_full;
-    uint8_t is_empty;
-    ringbuf_lock_t lock;
+    volatile size_t capacity;
+    volatile size_t size;
+    volatile size_t head;
+    volatile size_t tail;
+    volatile uint8_t is_full;
+    volatile uint8_t is_empty;
+    volatile ringbuf_lock_t lock;
     ringbuf_rule_t rule;
 }ringbuf_t;
 /*****************************************************/
@@ -159,6 +159,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_reset(ringbuf_t *ringbuf);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_align_optimize(ringbuf_t *ringbuf);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_byte(ringbuf_t *ringbuf, uint8_t data);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data, size_t length);
+RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_compensate_written(ringbuf_t *ringbuf, size_t length);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_byte(ringbuf_t *ringbuf, uint8_t *data);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_block(ringbuf_t *ringbuf, void *data, size_t length, size_t *read_length);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_byte(ringbuf_t *ringbuf, uint8_t *data);
@@ -172,7 +173,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_free_continuous_block(ringbuf_t *ringb
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_stuffed_continuous_block(ringbuf_t *ringbuf, void **data, size_t *length);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_lock(ringbuf_t *ringbuf);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_unlock(ringbuf_t *ringbuf);
-
+RINGBUF_PUBLIC(int)           ringbuf_locked(ringbuf_t *ringbuf);
 
 
 

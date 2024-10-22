@@ -70,4 +70,3 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_unlock(ringbuf_t *ringbuf);
 ## TODO
 
 1. add comment.
-2. expose function that de/increasing size and retreat/advance head/tail in order to fit the form of DMA transmission.

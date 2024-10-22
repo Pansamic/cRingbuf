@@ -119,6 +119,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_reset(ringbuf_t *ringbuf)
 // TODO
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_align_optimize(ringbuf_t *ringbuf)
 {
+    (void)ringbuf;
     return RINGBUF_OK;
 }
 
@@ -150,6 +151,10 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_byte(ringbuf_t *ringbuf, uint8_t dat
 
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data, size_t length)
 {
+    /* latch head and tail to avoid modification
+     * by other thread or interrupt. */
+    size_t current_head = ringbuf->head;
+    size_t current_tail = ringbuf->tail;
     /* block begining from head */
     size_t first_block_length = 0;
     /* block begining from buffer head */
@@ -157,7 +162,11 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data
     size_t free_size = 0;
     size_t overwrite_size = 0;
 
-    if(ringbuf == NULL || data == NULL || length == 0)
+    if(length == 0)
+    {
+        return RINGBUF_OK;
+    }
+    if(ringbuf == NULL || data == NULL)
     {
         return RINGBUF_ERROR;
     }
@@ -178,12 +187,12 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data
         return RINGBUF_LACK_SPACE;
     }
 
-    if(ringbuf->head > ringbuf->tail)
+    if(current_head > current_tail)
     {
-        first_block_length = (ringbuf->head + length)>ringbuf->capacity ? ringbuf->capacity - ringbuf->head : length;
-        second_block_length = (length - first_block_length)>(ringbuf->tail)?(ringbuf->tail):(length - first_block_length);
+        first_block_length = (current_head + length)>ringbuf->capacity ? ringbuf->capacity - current_head : length;
+        second_block_length = (length - first_block_length)>(current_tail)?(current_tail):(length - first_block_length);
     }
-    else if(ringbuf->head < ringbuf->tail)
+    else if(current_head < current_tail)
     {
         second_block_length = 0;
         first_block_length = length > free_size ? free_size : length;
@@ -194,12 +203,14 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data
         {
             ringbuf->head = 0;
             ringbuf->tail = 0;
+            current_head = ringbuf->head;
+            current_tail = ringbuf->tail;
             first_block_length = length>ringbuf->capacity ? ringbuf->capacity : length;
             second_block_length = 0;
         }
     }
 
-    ringbuf_memcpy((uint8_t*)ringbuf->buf + ringbuf->head, data, first_block_length);
+    ringbuf_memcpy((uint8_t*)ringbuf->buf + current_head, data, first_block_length);
     ringbuf_memcpy((uint8_t*)ringbuf->buf, (uint8_t*)data + first_block_length, second_block_length);
     RINGBUF_ADD_LENGTH(ringbuf,first_block_length + second_block_length);
     RINGBUF_CHECK_FULL(ringbuf);
@@ -211,9 +222,27 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_write_block(ringbuf_t *ringbuf, void *data
         {
             ringbuf->buf[ringbuf->head] = *((uint8_t*)data + free_size + i);
             RINGBUF_ADD_LENGTH(ringbuf,1);
-            RINGBUF_REMOVE_LENGTH(ringbuf,1);
+            // TODO: examine the effect of commenting this line.
+            // RINGBUF_REMOVE_LENGTH(ringbuf,1);
         }
     }
+    ringbuf_unlock(ringbuf);
+    return RINGBUF_OK;
+}
+
+RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_compensate_written(ringbuf_t *ringbuf, size_t length)
+{
+    if(ringbuf == NULL)
+    {
+        return RINGBUF_ERROR;
+    }
+    if(ringbuf_lock(ringbuf))
+    {
+        return RINGBUF_LOCKED;
+    }
+    RINGBUF_ADD_LENGTH(ringbuf,length);
+    RINGBUF_CHECK_FULL(ringbuf);
+    ringbuf->is_empty = 0;
     ringbuf_unlock(ringbuf);
     return RINGBUF_OK;
 }
@@ -245,6 +274,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_block(ringbuf_t *ringbuf, void *data, 
     ringbuf_ret_t ret = RINGBUF_OK;
     size_t actual_read_length = 0;
     ret = ringbuf_peek_block(ringbuf, data, length, &actual_read_length);
+    *read_length = 0;
     if(ret != RINGBUF_OK)
     {
         return ret;
@@ -276,6 +306,10 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_byte(ringbuf_t *ringbuf, uint8_t *dat
 }
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_block(ringbuf_t *ringbuf, void *data, size_t length, size_t *read_length)
 {
+    /* latch head and tail to avoid modification
+     * by other thread or interrupt. */
+    size_t current_head = ringbuf->head;
+    size_t current_tail = ringbuf->tail;
     /* block begining from tail */
     size_t first_block_length = 0;
     /* block begining from buffer head */
@@ -297,24 +331,24 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_block(ringbuf_t *ringbuf, void *data,
         *read_length = 0;
         return RINGBUF_LOCKED;
     }
-    if(ringbuf->head > ringbuf->tail)
+    if(current_head > current_tail)
     {
         first_block_length = length > ringbuf->size ? ringbuf->size : length;
         second_block_length = 0;
         actual_read_length = first_block_length;
     }
-    else if(ringbuf->head < ringbuf->tail)
+    else if(current_head < current_tail)
     {
-        first_block_length = length > (ringbuf->capacity - ringbuf->tail) ? (ringbuf->capacity - ringbuf->tail) : length;
-        second_block_length = (length - first_block_length)>(ringbuf->head)?(ringbuf->head):(length - first_block_length);
+        first_block_length = length > (ringbuf->capacity - current_tail) ? (ringbuf->capacity - current_tail) : length;
+        second_block_length = (length - first_block_length)>(current_head)?(current_head):(length - first_block_length);
         actual_read_length = first_block_length + second_block_length;
     }
     else
     {
         if(ringbuf->is_full)
         {
-            first_block_length = (length > ringbuf->capacity-ringbuf->tail) ? ringbuf->capacity-ringbuf->tail : length;
-            second_block_length = (length > first_block_length) ? ((length > ringbuf->capacity) ? ringbuf->head : length - first_block_length) : 0;
+            first_block_length = (length > ringbuf->capacity-current_tail) ? ringbuf->capacity-current_tail : length;
+            second_block_length = (length > first_block_length) ? ((length > ringbuf->capacity) ? current_head : length - first_block_length) : 0;
             actual_read_length = first_block_length + second_block_length;
         }
         else if(ringbuf->is_empty)
@@ -322,7 +356,7 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_block(ringbuf_t *ringbuf, void *data,
             return RINGBUF_EMPTY;
         }
     }
-    ringbuf_memcpy(data, (uint8_t*)ringbuf->buf + ringbuf->tail, first_block_length);
+    ringbuf_memcpy(data, (uint8_t*)ringbuf->buf + current_tail, first_block_length);
     ringbuf_memcpy((uint8_t*)data + first_block_length, ringbuf->buf, second_block_length);
     *read_length = actual_read_length;
     ringbuf_unlock(ringbuf);
@@ -425,10 +459,6 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_free_continuous_block(ringbuf_t *ringb
     {
         return RINGBUF_ERROR;
     }
-    if(ringbuf->is_empty)
-    {
-        return RINGBUF_EMPTY;
-    }
     if(ringbuf_lock(ringbuf))
     {
         return RINGBUF_LOCKED;
@@ -503,7 +533,17 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_unlock(ringbuf_t *ringbuf)
     ringbuf->lock = RINGBUF_UNLOCK;
     return RINGBUF_OK;
 }
-
+RINGBUF_PUBLIC(int) ringbuf_locked(ringbuf_t *ringbuf)
+{
+    if(ringbuf->lock == RINGBUF_LOCK)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
 inline static size_t ringbuf_memcpy(void *dest, void *src, size_t length)
 {
     if(length == 0)
