@@ -48,7 +48,7 @@
     ringbuf->size -= (retreat_num)
 
 #define RINGBUF_CHECK_FULL(ringbuf)\
-    if(ringbuf->head == ringbuf->tail)\
+    if(ringbuf->head == ringbuf->tail && ringbuf->size == ringbuf->capacity)\
     {\
         ringbuf->is_full = 1;\
     }
