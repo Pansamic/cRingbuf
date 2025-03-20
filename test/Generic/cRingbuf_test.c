@@ -3,7 +3,7 @@
 #include <time.h>
 #include <string.h>
 
-#include "cRingbuf.h"
+#include "cringbuf.h"
 
 #define RINGBUF_HANDLE(fn) \
     {\

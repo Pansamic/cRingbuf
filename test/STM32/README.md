@@ -1,4 +1,4 @@
-# cRingbuf on MCUs
+# cringbuf on MCUs
 
 The STM32 cmake test project is from [rxdu/stm32_cmake](https://github.com/rxdu/stm32_cmake).
 
@@ -12,7 +12,7 @@ The STM32 cmake test project is from [rxdu/stm32_cmake](https://github.com/rxdu/
 ## Example
 
 ```c
-#include "cRingbuf.h"
+#include "cringbuf.h"
 
 #define RING_BUFFER_SIZE 256 // unit:byte, must be power of two
 

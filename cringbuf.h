@@ -1,13 +1,13 @@
 /**
- * @file cRingbuf.h
+ * @file cringbuf.h
  * @author pansamic (pansamic@foxmail.com)
  * @brief ring buffer for embeded system.
  * @feature multi-thread safe.
  * @feature optimize memeory copy speed.
  * @feature support fill or discard dataframe when buffer is going to be full.
  * @feature optimize for continuous memory block, DMA-friendly.
- * @version 0.1.0
- * @date 2023-10-20
+ * @version 0.2.0
+ * @date 2025-03-20
  * 
  * @copyright Copyright (c) 2023
  * 
@@ -107,8 +107,8 @@ then using the RINGBUF_API_VISIBILITY flag to "export" the same symbols the way 
 
 /* project version */
 #define RINGBUF_VERSION_MAJOR 0
-#define RINGBUF_VERSION_MINOR 1
-#define RINGBUF_VERSION_PATCH 1
+#define RINGBUF_VERSION_MINOR 2
+#define RINGBUF_VERSION_PATCH 0
 
 /*****************************************************/
 /*                   TYPEDEFINE                      */
@@ -166,6 +166,8 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_byte(ringbuf_t *ringbuf, uint8_t *dat
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_peek_block(ringbuf_t *ringbuf, void *data, size_t length, size_t *read_length);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_remove_byte(ringbuf_t *ringbuf);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_remove_block(ringbuf_t *ringbuf, size_t length, size_t *removed_length);
+RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_find_byte(ringbuf_t *ringbuf, uint8_t data, size_t *offset);
+RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_find_block(ringbuf_t *ringbuf, void *data, size_t length, size_t *offset);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_size(ringbuf_t *ringbuf, size_t *size);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_capacity(ringbuf_t *ringbuf, size_t *capacity);
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_free_size(ringbuf_t *ringbuf, size_t *free_size);

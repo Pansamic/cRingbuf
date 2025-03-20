@@ -1,12 +1,12 @@
  /**
- * @file cRingbuf.c
+ * @file cringbuf.c
  * @author pansamic (pansamic@foxmail.com)
  * @brief ring buffer for embeded system.
  * @feature multi-thread safe.
  * @feature optimize memeory copy speed.
  * @feature support fill or discard dataframe when buffer is going to be full.
  * @feature optimize for continuous memory block, DMA-friendly.
- * @version 0.1.0
+ * @version 0.2.0
  * @date 2023-10-20
  * 
  * @copyright Copyright (c) 2023
@@ -15,14 +15,14 @@
 /*****************************************************/
 /*                    INCLUDE                        */
 /*****************************************************/
-#include "cRingbuf.h"
+#include "cringbuf.h"
 
 /*****************************************************/
 /*                     MACRO                         */
 /*****************************************************/
 /* This is a safeguard to prevent copy-pasters from using incompatible C and header files */
-#if (RINGBUF_VERSION_MAJOR != 0) || (RINGBUF_VERSION_MINOR != 1) || (RINGBUF_VERSION_PATCH != 1)
-    #error cRingbuf.h and cRingbuf.c have different versions. Make sure that both have the same.
+#if (RINGBUF_VERSION_MAJOR != 0) || (RINGBUF_VERSION_MINOR != 2) || (RINGBUF_VERSION_PATCH != 0)
+    #error cringbuf.h and cringbuf.c have different versions. Make sure that both have the same.
 #endif
 /**
  * Checks if the buffer_size is a power of two.
@@ -410,7 +410,86 @@ RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_remove_block(ringbuf_t *ringbuf, size_t le
     ringbuf_unlock(ringbuf);
     return RINGBUF_OK;
 }
-
+RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_find_byte(ringbuf_t *ringbuf, uint8_t data, size_t *offset)
+{
+    size_t current_tail = 0;
+    size_t current_offset = 0;
+    if(ringbuf == NULL || offset == NULL)
+    {
+        return RINGBUF_ERROR;
+    }
+    if(ringbuf->is_empty)
+    {
+        return RINGBUF_EMPTY;
+    }
+    if(ringbuf_lock(ringbuf))
+    {
+        return RINGBUF_LOCKED;
+    }
+    current_tail = ringbuf->tail;
+    for(size_t i=0 ; i<ringbuf->size ; i++)
+    {
+        current_offset = (current_tail + i) & (ringbuf->capacity - 1);
+        if(ringbuf->buf[current_offset] == data)
+        {
+            *offset = i;
+            ringbuf_unlock(ringbuf);
+            return RINGBUF_OK;
+        }
+    }
+    ringbuf_unlock(ringbuf);
+    return RINGBUF_ERROR;
+}
+RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_find_block(ringbuf_t *ringbuf, void *data, size_t length, size_t *offset)
+{
+    size_t current_tail = 0;
+    size_t current_offset = 0;
+    size_t actual_offset = 0;
+    size_t actual_length = 0;
+    size_t i = 0;
+    if(ringbuf == NULL || data == NULL || offset == NULL)
+    {
+        return RINGBUF_ERROR;
+    }
+    if(ringbuf->is_empty)
+    {
+        return RINGBUF_EMPTY;
+    }
+    if(ringbuf->size < length)
+    {
+        return RINGBUF_ERROR;
+    }
+    if(ringbuf_lock(ringbuf))
+    {
+        return RINGBUF_LOCKED;
+    }
+    current_tail = ringbuf->tail;
+    for(i=0 ; i<ringbuf->size ; i++)
+    {
+        current_offset = (current_tail + i) & (ringbuf->capacity - 1);
+        if(ringbuf->buf[current_offset] == *((uint8_t*)data))
+        {
+            actual_offset = i;
+            actual_length = 1;
+            while(actual_length < length)
+            {
+                if(ringbuf->buf[(current_offset + actual_length) & (ringbuf->capacity - 1)] != *((uint8_t*)data + actual_length))
+                {
+                    break;
+                }
+                actual_length++;
+            }
+            if(actual_length == length)
+            {
+                *offset = actual_offset;
+                ringbuf_unlock(ringbuf);
+                return RINGBUF_OK;
+            }
+        }
+    }
+    ringbuf_unlock(ringbuf);
+    return RINGBUF_ERROR;
+}
 RINGBUF_PUBLIC(ringbuf_ret_t) ringbuf_get_size(ringbuf_t *ringbuf, size_t *size)
 {
     if(ringbuf == NULL)

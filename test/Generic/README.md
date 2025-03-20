@@ -1,27 +1,27 @@
-# cRingbuf on Generic Platform
+# cringbuf on Generic Platform
 
 ## Build test
 
 **Build on Linux**
 
 ```bash
-git clone https://github.com/Pansamic/cRingbuf.git
-cd cRingbuf/test/Generic
+git clone https://github.com/Pansamic/cringbuf.git
+cd cringbuf/test/Generic
 mkdir build && cd build
 cmake ..
 make
-./cRingbuf_test 1024 10
+./cringbuf_test 1024 10
 ```
 
 **Build on Windows**
 
 ```bash
-git clone https://github.com/Pansamic/cRingbuf.git
-cd cRingbuf/test/Generic
+git clone https://github.com/Pansamic/cringbuf.git
+cd cringbuf/test/Generic
 mkdir build && cd build
 cmake -G "MinGW Makefiles" ..
 mingw32-make
-cRingbuf_test 1024 10
+cringbuf_test 1024 10
 ```
 
 ## Test description
@@ -32,7 +32,7 @@ cRingbuf_test 1024 10
 ## Example
 
 ```c
-#include "cRingbuf.h"
+#include "cringbuf.h"
 
 #define RING_BUFFER_SIZE 1024 //unit:byte, must be power of two
 
